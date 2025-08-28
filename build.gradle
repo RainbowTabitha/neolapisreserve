@@ -1,38 +1,93 @@
 plugins {
-	id 'fabric-loom' version '1.10-SNAPSHOT'
+	id 'java-library'
+	id 'eclipse'
+	id 'idea'
+	id 'maven-publish'
+	id 'net.neoforged.gradle.userdev' version '7.0.190'
 }
 
-sourceCompatibility = JavaVersion.VERSION_21
-targetCompatibility = JavaVersion.VERSION_21
+tasks.named('wrapper', Wrapper).configure {
+	distributionType = Wrapper.DistributionType.BIN
+}
 
-archivesBaseName = project.archives_base_name
-version = project.mod_version
-group = project.maven_group
+version = mod_version
+group = mod_group
+
+repositories {
+	mavenLocal()
+	maven { url = "https://cursemaven.com" }
+	maven { url = "https://maven.neoforged.net/releases" }
+	maven { url = "https://libraries.minecraft.net" }
+	mavenCentral()
+}
+
+base {
+	archivesName = mod_id
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+configurations {
+	runtimeClasspath.extendsFrom localRuntime
+}
 
 dependencies {
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-
+	implementation "net.neoforged:neoforge:${neo_version}"
+	implementation 'org.spongepowered:mixin:0.8.5'
 }
 
-processResources {
-	inputs.property "version", project.version
+tasks.withType(ProcessResources).configureEach {
+	var replaceProperties = [
+			minecraft_version      : minecraft_version,
+			minecraft_version_range: minecraft_version_range,
+			neo_version            : neo_version,
+			neo_version_range      : neo_version_range,
+			loader_version_range   : loader_version_range,
+			mod_id                 : mod_id,
+			mod_name               : mod_name,
+			mod_license            : mod_license,
+			mod_version            : mod_version,
+			mod_authors            : mod_authors,
+			mod_description        : mod_description
+	]
+	inputs.properties replaceProperties
 
-	filesMatching("fabric.mod.json") {
-		expand "version": project.version
+	filesMatching(['META-INF/neoforge.mods.toml']) {
+		expand replaceProperties
 	}
 }
 
-tasks.withType(JavaCompile) {
-	options.encoding = "UTF-8"
+publishing {
+	publications {
+		register('mavenJava', MavenPublication) {
+			from components.java
+		}
+	}
+	repositories {
+		maven {
+			url "file://${project.projectDir}/repo"
+		}
+	}
 }
-java {
-	withSourcesJar()
+
+tasks.withType(JavaCompile).configureEach {
+	options.encoding = 'UTF-8'
+}
+
+idea {
+	module {
+		downloadSources = true
+		downloadJavadoc = true
+	}
 }
 
 jar {
-	from("LICENSE") {
-		rename { "${it}_${project.archivesBaseName}"}
+	manifest {
+		attributes(
+			'MixinConfigs': 'META-INF/shutupgl.mixins.json'
+		)
 	}
 }

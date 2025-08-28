@@ -1,10 +1,10 @@
 package tf.ssf.sfort.lapisreserve.mixin;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtList;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import org.spongepowered.asm.mixin.Dynamic;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -14,31 +14,41 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import tf.ssf.sfort.lapisreserve.PlayerInterface;
 
-@Mixin(PlayerInventory.class)
+@Mixin(Inventory.class)
 public class PlayerReserve implements PlayerInterface {
 	@Dynamic
 	public ItemStack lapisreserve = ItemStack.EMPTY;
 	@Shadow
-	public PlayerEntity player;
+	public Player player;
 
-	@Inject(method = "writeNbt(Lnet/minecraft/nbt/NbtList;)Lnet/minecraft/nbt/NbtList;",at=@At("HEAD"))
-	public void serialize(NbtList tag, CallbackInfoReturnable<NbtList> info) {
+	@Inject(method = "save(Lnet/minecraft/nbt/ListTag;)Lnet/minecraft/nbt/ListTag;", at=@At("HEAD"))
+	public void serialize(ListTag tag, CallbackInfoReturnable<ListTag> info) {
 		if (lapisreserve.isEmpty()) return;
-		NbtCompound compoundTag = new NbtCompound();
+		CompoundTag compoundTag = new CompoundTag();
 		compoundTag.putByte("LapisReserve", (byte)0);
-		tag.add(lapisreserve.encode(this.player.getRegistryManager(), compoundTag));
+	
+		CompoundTag itemTag = new CompoundTag();
+		lapisreserve.save(player.level().registryAccess(), itemTag);
+		compoundTag.put("Item", itemTag);
+	
+		tag.add(compoundTag);
 	}
-	@Inject(method = "readNbt(Lnet/minecraft/nbt/NbtList;)V",at=@At("HEAD"))
-	public void deserialize(NbtList tag, CallbackInfo info) {
-		for(int i = 0; i < tag.size(); ++i) {
-			NbtCompound compoundTag = tag.getCompound(i);
-			if (compoundTag.contains("LapisReserve")){
-				lapisreserve = ItemStack.fromNbt(this.player.getRegistryManager(), compoundTag).orElse(ItemStack.EMPTY);
+	
+	@Inject(method = "load(Lnet/minecraft/nbt/ListTag;)V", at=@At("HEAD"))
+	public void deserialize(ListTag tag, CallbackInfo info) {
+		for (int i = 0; i < tag.size(); ++i) {
+			CompoundTag compoundTag = tag.getCompound(i);
+			if (compoundTag.contains("LapisReserve")) {
+				if (compoundTag.contains("Item")) {
+					lapisreserve = ItemStack.parse(player.level().registryAccess(), compoundTag.getCompound("Item"))
+										   .orElse(ItemStack.EMPTY);
+				}
 				tag.remove(i);
 				break;
 			}
 		}
 	}
+
 	@Override public ItemStack getLapisreserve(){ return lapisreserve; }
 	@Override public void setLapisreserve(ItemStack stack) { lapisreserve = stack; }
 }

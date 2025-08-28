@@ -1,0 +1,11 @@
+modLoader="javafml"
+loaderVersion="[20,)"
+license="MIT"
+
+[[mods]]
+modId="lapisreserve"
+version="${mod_version}"
+displayName="Lapis Reserve"
+description='''Gives every player their own Lapis Reserve for enchanting'''
+authors="SFort, VesMaybeVesper, furtabs"
+homepage="https://github.com/VesMaybeVesper/MC-lapisreserve"

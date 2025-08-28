@@ -1,6 +1,6 @@
 package tf.ssf.sfort.lapisreserve;
 
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.item.ItemStack;
 
 public interface PlayerInterface {
     ItemStack getLapisreserve();
